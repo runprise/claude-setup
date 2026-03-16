@@ -33,16 +33,6 @@ Das Update-Script:
 
 Das Script fuehrt dich interaktiv durch die Installation. Jeder Schritt kann uebersprungen werden.
 
-### Uebersicht
-
-| Komponente | Beschreibung |
-|------------|-------------|
-| **Claude Code** | `@anthropic-ai/claude-code` CLI Tool |
-| **Konfiguration** | Rules, 12 Skills, Hooks, Commands, Templates → `~/.claude/` |
-| **8 Plugins** | superpowers, code-review, feature-dev, frontend-design, n8n, u.a. |
-| **MCP-Server** | Playwright (Chrome + Lightpanda Headless) |
-| **CLI Tools** | claude-code-tools, claude-monitor, skill-seekers, Lightpanda |
-
 ### Voraussetzungen
 
 | Tool | Version | Hinweis |
@@ -53,35 +43,74 @@ Das Script fuehrt dich interaktiv durch die Installation. Jeder Schritt kann ueb
 
 ### Plugins
 
-Werden nach der Basisinstallation ueber ein separates Script installiert:
+Werden nach der Basisinstallation ueber `~/.claude/install-plugins.sh` installiert.
 
-| Plugin | Quelle | Zweck |
-|--------|--------|-------|
-| superpowers | anthropics/claude-plugins-official | Brainstorming, TDD, Plan-Execution, Code-Review |
-| code-review | anthropics/claude-plugins-official | PR Code Reviews |
-| feature-dev | anthropics/claude-plugins-official | Gefuehrte Feature-Entwicklung |
-| code-simplifier | anthropics/claude-plugins-official | Code-Vereinfachung |
-| security-guidance | anthropics/claude-plugins-official | Sicherheitsberatung |
-| frontend-design | anthropics/claude-code | Frontend UI Design |
-| n8n-mcp-skills | czlonkowski/n8n-skills | n8n Workflow Skills |
-| agent-deck | asheshgoplani/agent-deck | Session-Management |
+#### Workflow & Qualitaet
+
+| Plugin | Beschreibung |
+|--------|-------------|
+| **superpowers** | Kompletter Entwicklungs-Workflow: Brainstorming vor Features, TDD, strukturierte Plan-Erstellung und -Ausfuehrung, Code-Review mit Checklisten, systematisches Debugging |
+| **code-review** | Automatisierte PR-Reviews: prueft Code auf Bugs, Security-Probleme, Code-Qualitaet und Einhaltung von Projekt-Konventionen |
+| **feature-dev** | Gefuehrte Feature-Entwicklung: analysiert erst die bestehende Codebase, entwirft Architektur, dann schrittweise Implementierung |
+| **code-simplifier** | Prueft kuerzlich geaenderten Code auf Wiederverwendbarkeit, Konsistenz und unnoetige Komplexitaet — und behebt gefundene Probleme |
+| **security-guidance** | Sicherheitsberatung beim Entwickeln: erkennt OWASP-Risiken, unsichere Patterns und schlaegt sichere Alternativen vor |
+
+#### Frontend & Design
+
+| Plugin | Beschreibung |
+|--------|-------------|
+| **frontend-design** | Generiert produktionsreife, visuell hochwertige Frontend-Interfaces — vermeidet generisches "AI-Look" Design |
+
+#### Integrationen
+
+| Plugin | Beschreibung |
+|--------|-------------|
+| **n8n-mcp-skills** | Skills fuer n8n Workflow-Automatisierung: Node-Konfiguration, Expression-Syntax, Code-Nodes (JS/Python), Workflow-Patterns, Validierung |
+| **agent-deck** | Terminal Session Manager: parallele Claude-Sessions, Sub-Agenten, Profil-Management, Session-Sharing zwischen Entwicklern |
+
+> **Quelle:** Plugins kommen aus offiziellen und Community-Marketplaces (`anthropics/claude-plugins-official`, `anthropics/claude-code`, `czlonkowski/n8n-skills`, `asheshgoplani/agent-deck`)
 
 ### Skills (enthalten in `config/skills/`)
 
-| Skill | Beschreibung |
-|-------|-------------|
-| vue-shadcn | Vue 3 + shadcn-vue Patterns |
-| nextjs-app | Next.js 15 App Router |
-| fastapi | FastAPI Backend (Python 3.12+) |
-| payload-cms | Payload CMS 3.x |
-| flutter | Flutter/Dart Apps |
-| postgresql | PostgreSQL Optimierung |
-| coolify | Coolify Deployment |
-| deploy | Docker Production Review |
-| server-hardening | Server Security |
-| git-clean-push | Sauberer Git Commit + Push |
-| project-setup | Best Practices fuer neue Projekte |
-| n8n-as-code | n8n Workflows als TypeScript |
+Skills sind Anleitungen die Claude bei bestimmten Aufgaben automatisch befolgt.
+
+#### Framework-Skills
+
+| Skill | Trigger | Beschreibung |
+|-------|---------|-------------|
+| **vue-shadcn** | Vue.js Projekte | Vue 3 Composition API, shadcn-vue Components, Pinia, vee-validate + Zod |
+| **nextjs-app** | Next.js Projekte | App Router, Server Components, Server Actions, shadcn/ui, Tailwind v4 |
+| **fastapi** | Python APIs | FastAPI mit uv, Pydantic v2, SQLAlchemy, Structlog, pytest |
+| **flutter** | Mobile Apps | Feature-first Struktur, Riverpod, GoRouter, Dart null-safety |
+| **postgresql** | DB-Optimierung | EXPLAIN ANALYZE, Index-Strategien, VACUUM, pg_stat_statements |
+
+#### DevOps & Deployment
+
+| Skill | Trigger | Beschreibung |
+|-------|---------|-------------|
+| **coolify** | Coolify Deployment | Docker Compose fuer Coolify anpassen, Magic Env Vars, Debugging |
+| **deploy** | Docker Review | Dockerfile + docker-compose.yml auf Production-Readiness pruefen |
+| **server-hardening** | Server-Sicherheit | SSH, Fail2Ban, UFW, unattended-upgrades, Docker/Coolify Status |
+
+#### Workflow-Skills
+
+| Skill | Trigger | Beschreibung |
+|-------|---------|-------------|
+| **git-clean-push** | `/git-clean-push` | Lint → Stage → Commit → Push mit Validierung in jedem Schritt |
+| **project-setup** | Neues Projekt | Erkennt Sprache, richtet Linting, Testing, Git Hooks, CI/CD ein |
+| **n8n-as-code** | n8n Workflows | n8n Workflows als TypeScript mit n8nac CLI erstellen und validieren |
+
+### CLI Tools (optional)
+
+| Tool | Installation | Beschreibung |
+|------|-------------|-------------|
+| claudekit | npm | Claude Code Dev Utilities |
+| claude-code-tools | uv (Python) | env-safe, fix-session und weitere Helfer |
+| claude-monitor | uv (Python) | Session-Monitoring und -Analyse |
+| notebooklm-mcp-cli | uv (Python) | Google NotebookLM MCP Server |
+| skill-seekers | pipx (Python) | Skill-Generierung aus Dokumentation |
+| Lightpanda | Binary | Schneller Headless Browser fuer E2E Tests |
+| terminal-notifier | brew (macOS) | Desktop-Benachrichtigungen bei Claude-Wartepausen |
 
 ## Plattformen
 
@@ -124,7 +153,7 @@ claude-setup/
 │   ├── settings.json         # Hooks, Permissions, Env-Variablen
 │   ├── .mcp.json             # MCP-Server (Playwright)
 │   ├── rules/                # Coding Standards, Workflow, Testing
-│   ├── skills/               # 12 Framework-Skills
+│   ├── skills/               # 11 Framework-Skills
 │   ├── hooks/                # Session-Hooks (Lightpanda, Cleanup)
 │   ├── templates/            # Vorlagen (.env.test)
 │   └── commands/             # Slash Commands (Lightpanda)

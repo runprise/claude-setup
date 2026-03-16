@@ -37,7 +37,7 @@ Die gesamte Claude-Code-Konfiguration liegt in `~/.claude/` und wird als Git-Rep
 │   ├── tech-stack.md            #   Vue, Next.js, Node, Docker/Coolify
 │   ├── workflow.md              #   Lesen vor Aendern, Tests, Sprache
 │   └── testing.md               #   Playwright, Lightpanda, .env.test
-├── skills/                      # Framework-Skills (12 Skills)
+├── skills/                      # Framework-Skills (11 Skills)
 │   ├── coolify/                 #   Coolify Deployment
 │   ├── deploy/                  #   Docker Review fuer Coolify
 │   ├── fastapi/                 #   FastAPI Backend (Python 3.12+)
@@ -45,7 +45,6 @@ Die gesamte Claude-Code-Konfiguration liegt in `~/.claude/` und wird als Git-Rep
 │   ├── git-clean-push/          #   Sauberer Git Commit + Push
 │   ├── n8n-as-code/             #   n8n Workflows als TypeScript
 │   ├── nextjs-app/              #   Next.js 15 App Router
-│   ├── payload-cms/             #   Payload CMS 3.x
 │   ├── postgresql/              #   PostgreSQL Optimierung
 │   ├── project-setup/           #   Best Practices fuer neue Projekte
 │   ├── server-hardening/        #   Server Security
