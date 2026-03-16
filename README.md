@@ -99,6 +99,7 @@ Skills sind Anleitungen die Claude bei bestimmten Aufgaben automatisch befolgt.
 | **git-clean-push** | `/git-clean-push` | Lint → Stage → Commit → Push mit Validierung in jedem Schritt |
 | **project-setup** | Neues Projekt | Erkennt Sprache, richtet Linting, Testing, Git Hooks, CI/CD ein |
 | **n8n-as-code** | n8n Workflows | n8n Workflows als TypeScript mit n8nac CLI erstellen und validieren |
+| **roxy** | Lokale Domains | Roxy Dev-Proxy: `.roxy`-Domains mit Auto-HTTPS, Path-Routing, Wildcards |
 
 ### CLI Tools (optional)
 
