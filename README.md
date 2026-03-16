@@ -25,7 +25,7 @@ Das Script fuehrt dich interaktiv durch die Installation. Jeder Schritt kann ueb
 | Komponente | Beschreibung |
 |------------|-------------|
 | **Claude Code** | `@anthropic-ai/claude-code` CLI Tool |
-| **Konfiguration** | Rules, 13 Skills, Hooks, Commands, Templates → `~/.claude/` |
+| **Konfiguration** | Rules, 12 Skills, Hooks, Commands, Templates → `~/.claude/` |
 | **8 Plugins** | superpowers, code-review, feature-dev, frontend-design, n8n, u.a. |
 | **MCP-Server** | Playwright (Chrome + Lightpanda Headless) |
 | **CLI Tools** | claude-code-tools, claude-monitor, skill-seekers, Lightpanda |
@@ -69,7 +69,6 @@ Werden nach der Basisinstallation ueber ein separates Script installiert:
 | git-clean-push | Sauberer Git Commit + Push |
 | project-setup | Best Practices fuer neue Projekte |
 | n8n-as-code | n8n Workflows als TypeScript |
-| reflagged-ci | Corporate Identity Design |
 
 ## Plattformen
 
@@ -96,7 +95,7 @@ runprise-claude/
 │   ├── settings.json         # Hooks, Permissions, Env-Variablen
 │   ├── .mcp.json             # MCP-Server (Playwright)
 │   ├── rules/                # Coding Standards, Workflow, Testing
-│   ├── skills/               # 13 Framework-Skills
+│   ├── skills/               # 12 Framework-Skills
 │   ├── hooks/                # Session-Hooks (Lightpanda, Cleanup)
 │   ├── templates/            # Vorlagen (.env.test)
 │   └── commands/             # Slash Commands (Lightpanda)
