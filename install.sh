@@ -2,74 +2,37 @@
 set -euo pipefail
 
 # =============================================================================
-# Runprise Claude Code Setup — Gefuehrte Installation
+# Runprise Claude Code Setup — Gefuehrte Erstinstallation
 # Funktioniert auf macOS und Linux
 # =============================================================================
 
-SETUP_REPO="https://github.com/runprise/claude-setup.git"
-CLAUDE_DIR="$HOME/.claude"
-LOCAL_BIN="$HOME/.local/bin"
-NODE_MIN_VERSION=22
+# --- Library laden ---
 
-# --- Farben und Hilfsfunktionen ---
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}" 2>/dev/null)" && pwd 2>/dev/null || echo "")"
 
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-CYAN='\033[0;36m'
-BOLD='\033[1m'
-NC='\033[0m'
+# Bei curl | bash: Library aus dem geklonten Repo laden
+if [[ -f "$SCRIPT_DIR/lib/common.sh" ]]; then
+    source "$SCRIPT_DIR/lib/common.sh"
+else
+    # Temp-Verzeichnis fuer Remote-Ausfuehrung
+    _REMOTE_TMP="$(mktemp -d)"
+    trap "rm -rf '$_REMOTE_TMP'" EXIT
+    git clone --depth 1 --quiet "https://github.com/runprise/claude-setup.git" "$_REMOTE_TMP" 2>/dev/null \
+        || { echo "[ERROR] Konnte Setup-Repo nicht laden."; exit 1; }
+    SCRIPT_DIR="$_REMOTE_TMP"
+    source "$SCRIPT_DIR/lib/common.sh"
+fi
 
-info()    { echo -e "${BLUE}[INFO]${NC} $*"; }
-success() { echo -e "${GREEN}[OK]${NC} $*"; }
-warn()    { echo -e "${YELLOW}[WARN]${NC} $*"; }
-error()   { echo -e "${RED}[ERROR]${NC} $*"; }
-header()  { echo -e "\n${BOLD}${CYAN}=== $* ===${NC}\n"; }
+# --- Cleanup bei Abbruch ---
 
-ask_yes_no() {
-    local prompt="$1"
-    local default="${2:-y}"
-    local yn
-    if [[ "$default" == "y" ]]; then
-        read -rp "$(echo -e "${YELLOW}$prompt [Y/n]:${NC} ")" yn
-        yn="${yn:-y}"
-    else
-        read -rp "$(echo -e "${YELLOW}$prompt [y/N]:${NC} ")" yn
-        yn="${yn:-n}"
+cleanup() {
+    release_lock
+    # Temp-Verzeichnis aufraemen (falls Remote)
+    if [[ -n "${_REMOTE_TMP:-}" ]] && [[ -d "${_REMOTE_TMP:-}" ]]; then
+        rm -rf "$_REMOTE_TMP"
     fi
-    [[ "$yn" =~ ^[Yy] ]]
 }
-
-command_exists() {
-    command -v "$1" &>/dev/null
-}
-
-detect_os() {
-    case "$(uname -s)" in
-        Darwin*) echo "macos" ;;
-        Linux*)  echo "linux" ;;
-        *)       echo "unknown" ;;
-    esac
-}
-
-detect_arch() {
-    case "$(uname -m)" in
-        arm64|aarch64) echo "arm64" ;;
-        x86_64|amd64)  echo "x86_64" ;;
-        *)             echo "unknown" ;;
-    esac
-}
-
-# --- Tracking ---
-
-declare -a INSTALLED_COMPONENTS=()
-declare -a SKIPPED_COMPONENTS=()
-declare -a FAILED_COMPONENTS=()
-
-track_installed() { INSTALLED_COMPONENTS+=("$1"); }
-track_skipped()   { SKIPPED_COMPONENTS+=("$1"); }
-track_failed()    { FAILED_COMPONENTS+=("$1"); }
+trap cleanup EXIT INT TERM
 
 # =============================================================================
 header "Runprise Claude Code Setup"
@@ -86,26 +49,16 @@ if [[ "$OS" == "unknown" ]]; then
     exit 1
 fi
 
-# --- Setup-Repo holen (fuer config/ Verzeichnis) ---
-
-SETUP_DIR=""
-if [[ -f "$(dirname "$0")/config/CLAUDE.md" ]]; then
-    # Lokale Ausfuehrung — config/ liegt neben dem Script
-    SETUP_DIR="$(cd "$(dirname "$0")" && pwd)"
-    info "Lokale Installation aus $SETUP_DIR"
-else
-    # Remote-Ausfuehrung (curl | bash) — temporaer klonen
-    SETUP_DIR="$(mktemp -d)"
-    info "Lade Setup-Repo herunter..."
-    git clone --depth 1 "$SETUP_REPO" "$SETUP_DIR" 2>/dev/null
-    trap "rm -rf '$SETUP_DIR'" EXIT
-    info "Setup-Repo geladen"
+# Lock erwerben
+mkdir -p "$CLAUDE_DIR"
+if ! acquire_lock; then
+    exit 1
 fi
 
-CONFIG_SRC="$SETUP_DIR/config"
+CONFIG_SRC="$SCRIPT_DIR/config"
 
 if [[ ! -d "$CONFIG_SRC" ]]; then
-    error "config/ Verzeichnis nicht gefunden in $SETUP_DIR"
+    error "config/ Verzeichnis nicht gefunden in $SCRIPT_DIR"
     exit 1
 fi
 
@@ -206,8 +159,6 @@ else
     fi
 fi
 
-# --- macOS: Homebrew ---
-
 if [[ "$OS" == "macos" ]]; then
     if command_exists brew; then
         success "Homebrew gefunden"
@@ -226,9 +177,13 @@ if command_exists claude; then
     track_skipped "Claude Code (bereits installiert)"
 else
     info "Installiere Claude Code..."
-    npm install -g @anthropic-ai/claude-code
-    success "Claude Code installiert"
-    track_installed "Claude Code"
+    if npm install -g @anthropic-ai/claude-code; then
+        success "Claude Code installiert"
+        track_installed "Claude Code"
+    else
+        error "Claude Code Installation fehlgeschlagen"
+        track_failed "Claude Code"
+    fi
 fi
 
 # =============================================================================
@@ -237,88 +192,73 @@ header "Schritt 3: Konfiguration deployen"
 
 info "Kopiere Runprise-Konfiguration nach $CLAUDE_DIR..."
 
-# Sicherstellen dass ~/.claude existiert
-mkdir -p "$CLAUDE_DIR"
-
-# Backup persoenlicher Dateien falls vorhanden
-for f in .claude.json .credentials.json; do
-    if [[ -f "$CLAUDE_DIR/$f" ]]; then
-        cp "$CLAUDE_DIR/$f" "$CLAUDE_DIR/$f.bak" 2>/dev/null || true
-    fi
-done
-
-# Konfigurationsdateien kopieren (nur fehlende oder explizit gewuenschte)
-copy_if_missing() {
+# Hilfsfunktion: Datei installieren mit Manifest-Tracking
+install_config_file() {
     local src="$1"
-    local dest="$2"
+    local rel_path="$2"
+    local dest="$CLAUDE_DIR/$rel_path"
+
     if [[ -f "$dest" ]]; then
-        if ask_yes_no "  $(basename "$dest") existiert bereits. Ueberschreiben?" "n"; then
-            cp "$src" "$dest"
-            success "  $(basename "$dest") aktualisiert"
+        if ask_yes_no "  $rel_path existiert bereits. Ueberschreiben?" "n"; then
+            deploy_file "$src" "$dest" "$rel_path" \
+                && success "  $rel_path aktualisiert" \
+                || { warn "  Fehler bei $rel_path"; track_failed "$rel_path"; return; }
         else
-            track_skipped "$(basename "$dest") (beibehalten)"
+            track_skipped "$rel_path (beibehalten)"
+            return
         fi
     else
         mkdir -p "$(dirname "$dest")"
-        cp "$src" "$dest"
-        success "  $(basename "$dest") erstellt"
+        deploy_file "$src" "$dest" "$rel_path" \
+            && success "  $rel_path erstellt" \
+            || { warn "  Fehler bei $rel_path"; track_failed "$rel_path"; return; }
     fi
 }
 
 # Hauptdateien
-copy_if_missing "$CONFIG_SRC/CLAUDE.md" "$CLAUDE_DIR/CLAUDE.md"
-copy_if_missing "$CONFIG_SRC/settings.json" "$CLAUDE_DIR/settings.json"
-copy_if_missing "$CONFIG_SRC/.mcp.json" "$CLAUDE_DIR/.mcp.json"
+install_config_file "$CONFIG_SRC/CLAUDE.md" "CLAUDE.md"
+install_config_file "$CONFIG_SRC/settings.json" "settings.json"
+install_config_file "$CONFIG_SRC/.mcp.json" ".mcp.json"
 
 # Rules
 info "Rules..."
-mkdir -p "$CLAUDE_DIR/rules"
 for rule in "$CONFIG_SRC"/rules/*.md; do
-    name="$(basename "$rule")"
-    copy_if_missing "$rule" "$CLAUDE_DIR/rules/$name"
+    [[ -f "$rule" ]] || continue
+    install_config_file "$rule" "rules/$(basename "$rule")"
 done
 
 # Skills
 info "Skills..."
 for skill_dir in "$CONFIG_SRC"/skills/*/; do
-    skill_name="$(basename "$skill_dir")"
-    mkdir -p "$CLAUDE_DIR/skills/$skill_name"
-    copy_if_missing "$skill_dir/SKILL.md" "$CLAUDE_DIR/skills/$skill_name/SKILL.md"
+    [[ -d "$skill_dir" ]] || continue
+    local_name="$(basename "$skill_dir")"
+    install_config_file "$skill_dir/SKILL.md" "skills/$local_name/SKILL.md"
 done
 
 # Hooks
 info "Hooks..."
-mkdir -p "$CLAUDE_DIR/hooks"
 for hook in "$CONFIG_SRC"/hooks/*; do
-    name="$(basename "$hook")"
-    copy_if_missing "$hook" "$CLAUDE_DIR/hooks/$name"
-    chmod +x "$CLAUDE_DIR/hooks/$name" 2>/dev/null || true
+    [[ -f "$hook" ]] || continue
+    local_name="$(basename "$hook")"
+    install_config_file "$hook" "hooks/$local_name"
+    chmod +x "$CLAUDE_DIR/hooks/$local_name" 2>/dev/null || true
 done
 
 # Templates
 info "Templates..."
-mkdir -p "$CLAUDE_DIR/templates"
 for tmpl in "$CONFIG_SRC"/templates/*; do
-    name="$(basename "$tmpl")"
-    copy_if_missing "$tmpl" "$CLAUDE_DIR/templates/$name"
+    [[ -f "$tmpl" ]] || continue
+    install_config_file "$tmpl" "templates/$(basename "$tmpl")"
 done
 
 # Commands
 info "Commands..."
-mkdir -p "$CLAUDE_DIR/commands"
 for cmd in "$CONFIG_SRC"/commands/*; do
-    name="$(basename "$cmd")"
-    copy_if_missing "$cmd" "$CLAUDE_DIR/commands/$name"
+    [[ -f "$cmd" ]] || continue
+    install_config_file "$cmd" "commands/$(basename "$cmd")"
 done
 
 track_installed "Konfiguration (Rules, Skills, Hooks, Templates, Commands)"
-
-# Persoenliche Dateien wiederherstellen
-for f in .claude.json .credentials.json; do
-    if [[ -f "$CLAUDE_DIR/$f.bak" ]]; then
-        mv "$CLAUDE_DIR/$f.bak" "$CLAUDE_DIR/$f"
-    fi
-done
 
 # =============================================================================
 header "Schritt 4: Pfade personalisieren"
@@ -326,11 +266,11 @@ header "Schritt 4: Pfade personalisieren"
 
 info "Passe Pfade in Konfigurationsdateien an dein System an..."
 
-PLACEHOLDER="__HOME__"
 for target_file in "$CLAUDE_DIR/settings.json" "$CLAUDE_DIR/.mcp.json"; do
-    if [[ -f "$target_file" ]] && grep -q "$PLACEHOLDER" "$target_file" 2>/dev/null; then
-        sed -i.bak "s|$PLACEHOLDER|$HOME|g" "$target_file"
-        rm -f "$target_file.bak"
+    if replace_placeholders "$target_file"; then
+        # Manifest mit dem finalen Checksum aktualisieren
+        local_rel="${target_file#$CLAUDE_DIR/}"
+        manifest_write "$local_rel" "$(file_checksum "$target_file")"
         success "Pfade in $(basename "$target_file") angepasst"
     fi
 done
@@ -356,7 +296,10 @@ cfg['hooks'] = hooks
 with open(settings_path, 'w') as f:
     json.dump(cfg, f, indent=2)
     f.write('\n')
-" 2>/dev/null && success "macOS-spezifische Hooks entfernt" || warn "Konnte macOS-Hooks nicht automatisch entfernen — bitte manuell pruefen"
+" 2>/dev/null && {
+        manifest_write "settings.json" "$(file_checksum "$CLAUDE_DIR/settings.json")"
+        success "macOS-spezifische Hooks entfernt"
+    } || warn "Konnte macOS-Hooks nicht automatisch entfernen — bitte manuell pruefen"
 fi
 
 # =============================================================================
@@ -420,13 +363,9 @@ track_installed "Plugin-Installationsscript"
 header "Schritt 6: Externe Tools"
 # =============================================================================
 
-# --- npm global ---
-
 echo -e "${BOLD}npm Global Packages:${NC}"
 
-NPM_PACKAGES=(
-    "claudekit"
-)
+NPM_PACKAGES=("claudekit")
 
 for pkg in "${NPM_PACKAGES[@]}"; do
     if npm list -g "$pkg" &>/dev/null; then
@@ -434,32 +373,26 @@ for pkg in "${NPM_PACKAGES[@]}"; do
         track_skipped "$pkg (bereits installiert)"
     else
         if ask_yes_no "  $pkg installieren?"; then
-            npm install -g "$pkg" && { success "$pkg installiert"; track_installed "$pkg"; } || { warn "Fehler bei $pkg"; track_failed "$pkg"; }
+            npm install -g "$pkg" && { success "$pkg installiert"; track_installed "$pkg"; } \
+                || { warn "Fehler bei $pkg"; track_failed "$pkg"; }
         else
             track_skipped "$pkg"
         fi
     fi
 done
 
-# --- uv tools ---
-
 if $HAVE_UV; then
     echo ""
     echo -e "${BOLD}Python Tools (uv):${NC}"
-
-    UV_TOOLS=(
-        "claude-code-tools"
-        "claude-monitor"
-        "notebooklm-mcp-cli"
-    )
-
+    UV_TOOLS=("claude-code-tools" "claude-monitor" "notebooklm-mcp-cli")
     for tool in "${UV_TOOLS[@]}"; do
         if uv tool list 2>/dev/null | grep -q "$tool"; then
             success "$tool bereits installiert"
             track_skipped "$tool (bereits installiert)"
         else
             if ask_yes_no "  $tool installieren?"; then
-                uv tool install "$tool" && { success "$tool installiert"; track_installed "$tool (uv)"; } || { warn "Fehler bei $tool"; track_failed "$tool"; }
+                uv tool install "$tool" && { success "$tool installiert"; track_installed "$tool (uv)"; } \
+                    || { warn "Fehler bei $tool"; track_failed "$tool"; }
             else
                 track_skipped "$tool"
             fi
@@ -467,31 +400,24 @@ if $HAVE_UV; then
     done
 fi
 
-# --- pipx tools ---
-
 if $HAVE_PIPX; then
     echo ""
     echo -e "${BOLD}Python Tools (pipx):${NC}"
-
-    PIPX_TOOLS=(
-        "skill-seekers"
-    )
-
+    PIPX_TOOLS=("skill-seekers")
     for tool in "${PIPX_TOOLS[@]}"; do
         if pipx list --short 2>/dev/null | grep -q "$tool"; then
             success "$tool bereits installiert"
             track_skipped "$tool (bereits installiert)"
         else
             if ask_yes_no "  $tool installieren?"; then
-                pipx install "$tool" && { success "$tool installiert"; track_installed "$tool (pipx)"; } || { warn "Fehler bei $tool"; track_failed "$tool"; }
+                pipx install "$tool" && { success "$tool installiert"; track_installed "$tool (pipx)"; } \
+                    || { warn "Fehler bei $tool"; track_failed "$tool"; }
             else
                 track_skipped "$tool"
             fi
         fi
     done
 fi
-
-# --- Lightpanda ---
 
 echo ""
 echo -e "${BOLD}Lightpanda (Headless Browser):${NC}"
@@ -502,7 +428,6 @@ if [[ -f "$LOCAL_BIN/lightpanda" ]]; then
 else
     if ask_yes_no "Lightpanda installieren? (Schneller Headless Browser fuer E2E Tests)"; then
         mkdir -p "$LOCAL_BIN"
-
         LIGHTPANDA_URL=""
         if [[ "$OS" == "macos" && "$ARCH" == "arm64" ]]; then
             LIGHTPANDA_URL="https://github.com/nicholasgasior/lightpanda-releases/releases/latest/download/lightpanda-aarch64-macos"
@@ -513,14 +438,19 @@ else
         elif [[ "$OS" == "linux" && "$ARCH" == "arm64" ]]; then
             LIGHTPANDA_URL="https://github.com/nicholasgasior/lightpanda-releases/releases/latest/download/lightpanda-aarch64-linux"
         fi
-
         if [[ -n "$LIGHTPANDA_URL" ]]; then
             info "Lade Lightpanda herunter..."
-            curl -fsSL -o "$LOCAL_BIN/lightpanda" "$LIGHTPANDA_URL" && chmod +x "$LOCAL_BIN/lightpanda"
-            success "Lightpanda installiert nach $LOCAL_BIN/lightpanda"
-            track_installed "Lightpanda"
+            if curl -fsSL -o "$LOCAL_BIN/lightpanda" "$LIGHTPANDA_URL"; then
+                chmod +x "$LOCAL_BIN/lightpanda"
+                success "Lightpanda installiert"
+                track_installed "Lightpanda"
+            else
+                rm -f "$LOCAL_BIN/lightpanda"
+                warn "Lightpanda Download fehlgeschlagen"
+                track_failed "Lightpanda"
+            fi
         else
-            warn "Keine passende Lightpanda-Version fuer $OS/$ARCH gefunden"
+            warn "Keine passende Lightpanda-Version fuer $OS/$ARCH"
             track_failed "Lightpanda"
         fi
     else
@@ -528,18 +458,17 @@ else
     fi
 fi
 
-# --- macOS: terminal-notifier ---
-
 if [[ "$OS" == "macos" ]]; then
     echo ""
     echo -e "${BOLD}macOS Tools:${NC}"
-
     if command_exists terminal-notifier; then
         success "terminal-notifier bereits installiert"
         track_skipped "terminal-notifier (bereits installiert)"
     else
         if command_exists brew && ask_yes_no "  terminal-notifier installieren? (Desktop-Benachrichtigungen)"; then
-            brew install terminal-notifier && { success "terminal-notifier installiert"; track_installed "terminal-notifier"; } || track_failed "terminal-notifier"
+            brew install terminal-notifier \
+                && { success "terminal-notifier installiert"; track_installed "terminal-notifier"; } \
+                || track_failed "terminal-notifier"
         else
             track_skipped "terminal-notifier"
         fi
@@ -550,31 +479,16 @@ fi
 header "Schritt 7: PATH pruefen"
 # =============================================================================
 
-PATH_ADDITIONS=()
-
 if [[ ":$PATH:" != *":$LOCAL_BIN:"* ]]; then
-    PATH_ADDITIONS+=("$LOCAL_BIN")
-fi
-
-if [[ ${#PATH_ADDITIONS[@]} -gt 0 ]]; then
-    warn "Folgende Pfade fehlen in deinem PATH:"
-    for p in "${PATH_ADDITIONS[@]}"; do
-        echo "  $p"
-    done
-
+    warn "$LOCAL_BIN fehlt in PATH"
     SHELL_RC=""
-    if [[ -f "$HOME/.zshrc" ]]; then
-        SHELL_RC="$HOME/.zshrc"
-    elif [[ -f "$HOME/.bashrc" ]]; then
-        SHELL_RC="$HOME/.bashrc"
-    fi
+    [[ -f "$HOME/.zshrc" ]] && SHELL_RC="$HOME/.zshrc"
+    [[ -z "$SHELL_RC" ]] && [[ -f "$HOME/.bashrc" ]] && SHELL_RC="$HOME/.bashrc"
 
     if [[ -n "$SHELL_RC" ]] && ask_yes_no "PATH in $SHELL_RC ergaenzen?"; then
-        for p in "${PATH_ADDITIONS[@]}"; do
-            if ! grep -q "export PATH=\"$p" "$SHELL_RC" 2>/dev/null; then
-                echo "export PATH=\"$p:\$PATH\"" >> "$SHELL_RC"
-            fi
-        done
+        if ! grep -q "export PATH=\"$LOCAL_BIN" "$SHELL_RC" 2>/dev/null; then
+            echo "export PATH=\"$LOCAL_BIN:\$PATH\"" >> "$SHELL_RC"
+        fi
         success "PATH in $SHELL_RC ergaenzt — neues Terminal oeffnen oder: source $SHELL_RC"
     else
         warn "Bitte manuell ergaenzen: export PATH=\"$LOCAL_BIN:\$PATH\""
@@ -584,7 +498,7 @@ else
 fi
 
 # =============================================================================
-header "Schritt 8: Naechste Schritte"
+header "Naechste Schritte"
 # =============================================================================
 
 echo "  1. Claude Code starten:"
@@ -595,34 +509,9 @@ echo ""
 echo "  3. Plugins installieren:"
 echo -e "     ${CYAN}~/.claude/install-plugins.sh${NC}"
 echo ""
-echo "  Danach ist Claude Code mit dem Runprise Team-Setup einsatzbereit."
-
-# =============================================================================
-header "Zusammenfassung"
-# =============================================================================
-
-if [[ ${#INSTALLED_COMPONENTS[@]} -gt 0 ]]; then
-    echo -e "${GREEN}Installiert:${NC}"
-    for c in "${INSTALLED_COMPONENTS[@]}"; do
-        echo -e "  ${GREEN}+${NC} $c"
-    done
-fi
-
-if [[ ${#SKIPPED_COMPONENTS[@]} -gt 0 ]]; then
-    echo ""
-    echo -e "${YELLOW}Uebersprungen:${NC}"
-    for c in "${SKIPPED_COMPONENTS[@]}"; do
-        echo -e "  ${YELLOW}-${NC} $c"
-    done
-fi
-
-if [[ ${#FAILED_COMPONENTS[@]} -gt 0 ]]; then
-    echo ""
-    echo -e "${RED}Fehlgeschlagen:${NC}"
-    for c in "${FAILED_COMPONENTS[@]}"; do
-        echo -e "  ${RED}!${NC} $c"
-    done
-fi
-
+echo "  4. Spaeter aktualisieren:"
+echo -e "     ${CYAN}curl -fsSL https://raw.githubusercontent.com/runprise/claude-setup/main/update.sh | bash${NC}"
 echo ""
+
+print_summary
 success "Setup abgeschlossen!"

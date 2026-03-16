@@ -16,6 +16,19 @@ cd claude-setup
 ./install.sh
 ```
 
+## Update
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/runprise/claude-setup/main/update.sh | bash
+```
+
+Das Update-Script:
+- Erkennt welche Dateien im Repo geaendert wurden
+- Aktualisiert nur Dateien die lokal **nicht** manuell angepasst wurden
+- Zeigt lokal geaenderte Dateien als "beibehalten" an
+- Erstellt automatisch ein Backup vor Aenderungen
+- Neue Dateien (z.B. neue Skills) werden automatisch installiert
+
 ## Was wird installiert?
 
 Das Script fuehrt dich interaktiv durch die Installation. Jeder Schritt kann uebersprungen werden.
@@ -81,15 +94,31 @@ Werden nach der Basisinstallation ueber ein separates Script installiert:
 2. Beim ersten Start mit Anthropic Account einloggen
 3. Plugins installieren: `~/.claude/install-plugins.sh`
 
-## Detaillierte Dokumentation
+## Wie das Update funktioniert
 
-Siehe [SETUP-OVERVIEW.md](./SETUP-OVERVIEW.md) fuer eine vollstaendige Auflistung aller Komponenten, Quellen und Konfigurationsdetails.
+Das Setup nutzt ein **Manifest** (`~/.claude/.runprise-manifest`), das fuer jede installierte Datei den Checksum zum Zeitpunkt der Installation speichert.
+
+Beim Update wird verglichen:
+
+| Situation | Aktion |
+|-----------|--------|
+| Datei nur im Repo (neu) | Wird installiert |
+| Repo geaendert, lokal unberuehrt | Wird aktualisiert |
+| Repo geaendert, lokal auch geaendert | Wird uebersprungen (deine Version bleibt) |
+| Keine Aenderung im Repo | Nichts passiert |
+
+Um eine uebersprungene Datei trotzdem zu aktualisieren:
+1. Datei sichern/loeschen
+2. `update.sh` erneut ausfuehren
 
 ## Repo-Struktur
 
 ```
-runprise-claude/
-├── install.sh               # Gefuehrtes Installationsscript
+claude-setup/
+├── install.sh               # Gefuehrte Erstinstallation
+├── update.sh                # Intelligentes Update
+├── lib/
+│   └── common.sh            # Gemeinsame Funktionen
 ├── config/                   # Wird nach ~/.claude/ kopiert
 │   ├── CLAUDE.md             # Globale Instruktionen
 │   ├── settings.json         # Hooks, Permissions, Env-Variablen
@@ -110,4 +139,8 @@ Aenderungen an der Team-Konfiguration gehoeren in dieses Repo:
 1. Repo klonen: `git clone https://github.com/runprise/claude-setup.git`
 2. Dateien in `config/` anpassen
 3. Pull Request erstellen
-4. Nach Merge: Teammitglieder fuehren `install.sh` erneut aus (nur Aenderungen werden aktualisiert)
+4. Nach Merge: Teammitglieder fuehren `update.sh` aus
+
+## Detaillierte Dokumentation
+
+Siehe [SETUP-OVERVIEW.md](./SETUP-OVERVIEW.md) fuer eine vollstaendige Auflistung aller Komponenten, Quellen und Konfigurationsdetails.
