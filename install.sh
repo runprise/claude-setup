@@ -6,7 +6,7 @@ set -euo pipefail
 # Funktioniert auf macOS und Linux
 # =============================================================================
 
-CONFIG_REPO="https://github.com/runprise/claude-config.git"
+SETUP_REPO="https://github.com/runprise/claude-setup.git"
 CLAUDE_DIR="$HOME/.claude"
 LOCAL_BIN="$HOME/.local/bin"
 NODE_MIN_VERSION=22
@@ -83,6 +83,29 @@ info "Home:   $HOME"
 
 if [[ "$OS" == "unknown" ]]; then
     error "Nicht unterstuetztes Betriebssystem. Nur macOS und Linux werden unterstuetzt."
+    exit 1
+fi
+
+# --- Setup-Repo holen (fuer config/ Verzeichnis) ---
+
+SETUP_DIR=""
+if [[ -f "$(dirname "$0")/config/CLAUDE.md" ]]; then
+    # Lokale Ausfuehrung — config/ liegt neben dem Script
+    SETUP_DIR="$(cd "$(dirname "$0")" && pwd)"
+    info "Lokale Installation aus $SETUP_DIR"
+else
+    # Remote-Ausfuehrung (curl | bash) — temporaer klonen
+    SETUP_DIR="$(mktemp -d)"
+    info "Lade Setup-Repo herunter..."
+    git clone --depth 1 "$SETUP_REPO" "$SETUP_DIR" 2>/dev/null
+    trap "rm -rf '$SETUP_DIR'" EXIT
+    info "Setup-Repo geladen"
+fi
+
+CONFIG_SRC="$SETUP_DIR/config"
+
+if [[ ! -d "$CONFIG_SRC" ]]; then
+    error "config/ Verzeichnis nicht gefunden in $SETUP_DIR"
     exit 1
 fi
 
@@ -209,47 +232,93 @@ else
 fi
 
 # =============================================================================
-header "Schritt 3: Konfiguration klonen"
+header "Schritt 3: Konfiguration deployen"
 # =============================================================================
 
-if [[ -d "$CLAUDE_DIR/.git" ]]; then
-    warn "$CLAUDE_DIR ist bereits ein Git-Repository."
-    if ask_yes_no "Bestehende Konfiguration aktualisieren (git pull)?"; then
-        cd "$CLAUDE_DIR"
-        git stash 2>/dev/null || true
-        git pull --rebase origin main
-        git stash pop 2>/dev/null || true
-        cd - >/dev/null
-        success "Konfiguration aktualisiert"
-        track_installed "Config-Repo (aktualisiert)"
-    else
-        track_skipped "Config-Repo"
+info "Kopiere Runprise-Konfiguration nach $CLAUDE_DIR..."
+
+# Sicherstellen dass ~/.claude existiert
+mkdir -p "$CLAUDE_DIR"
+
+# Backup persoenlicher Dateien falls vorhanden
+for f in .claude.json .credentials.json; do
+    if [[ -f "$CLAUDE_DIR/$f" ]]; then
+        cp "$CLAUDE_DIR/$f" "$CLAUDE_DIR/$f.bak" 2>/dev/null || true
     fi
-elif [[ -d "$CLAUDE_DIR" ]]; then
-    warn "$CLAUDE_DIR existiert bereits, ist aber kein Git-Repo."
-    if ask_yes_no "Bestehenden Ordner sichern und Config-Repo klonen?"; then
-        BACKUP="$CLAUDE_DIR.backup.$(date +%Y%m%d%H%M%S)"
-        mv "$CLAUDE_DIR" "$BACKUP"
-        info "Backup erstellt: $BACKUP"
-        git clone "$CONFIG_REPO" "$CLAUDE_DIR"
-        # Persoenliche Dateien zurueckkopieren (keine Secrets im Repo)
-        for f in .claude.json .credentials.json; do
-            if [[ -f "$BACKUP/$f" ]]; then
-                cp "$BACKUP/$f" "$CLAUDE_DIR/$f"
-                info "  $f wiederhergestellt"
-            fi
-        done
-        success "Config-Repo geklont"
-        track_installed "Config-Repo (frisch geklont)"
+done
+
+# Konfigurationsdateien kopieren (nur fehlende oder explizit gewuenschte)
+copy_if_missing() {
+    local src="$1"
+    local dest="$2"
+    if [[ -f "$dest" ]]; then
+        if ask_yes_no "  $(basename "$dest") existiert bereits. Ueberschreiben?" "n"; then
+            cp "$src" "$dest"
+            success "  $(basename "$dest") aktualisiert"
+        else
+            track_skipped "$(basename "$dest") (beibehalten)"
+        fi
     else
-        track_skipped "Config-Repo"
+        mkdir -p "$(dirname "$dest")"
+        cp "$src" "$dest"
+        success "  $(basename "$dest") erstellt"
     fi
-else
-    info "Klone Konfiguration..."
-    git clone "$CONFIG_REPO" "$CLAUDE_DIR"
-    success "Config-Repo geklont nach $CLAUDE_DIR"
-    track_installed "Config-Repo"
-fi
+}
+
+# Hauptdateien
+copy_if_missing "$CONFIG_SRC/CLAUDE.md" "$CLAUDE_DIR/CLAUDE.md"
+copy_if_missing "$CONFIG_SRC/settings.json" "$CLAUDE_DIR/settings.json"
+copy_if_missing "$CONFIG_SRC/.mcp.json" "$CLAUDE_DIR/.mcp.json"
+
+# Rules
+info "Rules..."
+mkdir -p "$CLAUDE_DIR/rules"
+for rule in "$CONFIG_SRC"/rules/*.md; do
+    name="$(basename "$rule")"
+    copy_if_missing "$rule" "$CLAUDE_DIR/rules/$name"
+done
+
+# Skills
+info "Skills..."
+for skill_dir in "$CONFIG_SRC"/skills/*/; do
+    skill_name="$(basename "$skill_dir")"
+    mkdir -p "$CLAUDE_DIR/skills/$skill_name"
+    copy_if_missing "$skill_dir/SKILL.md" "$CLAUDE_DIR/skills/$skill_name/SKILL.md"
+done
+
+# Hooks
+info "Hooks..."
+mkdir -p "$CLAUDE_DIR/hooks"
+for hook in "$CONFIG_SRC"/hooks/*; do
+    name="$(basename "$hook")"
+    copy_if_missing "$hook" "$CLAUDE_DIR/hooks/$name"
+    chmod +x "$CLAUDE_DIR/hooks/$name" 2>/dev/null || true
+done
+
+# Templates
+info "Templates..."
+mkdir -p "$CLAUDE_DIR/templates"
+for tmpl in "$CONFIG_SRC"/templates/*; do
+    name="$(basename "$tmpl")"
+    copy_if_missing "$tmpl" "$CLAUDE_DIR/templates/$name"
+done
+
+# Commands
+info "Commands..."
+mkdir -p "$CLAUDE_DIR/commands"
+for cmd in "$CONFIG_SRC"/commands/*; do
+    name="$(basename "$cmd")"
+    copy_if_missing "$cmd" "$CLAUDE_DIR/commands/$name"
+done
+
+track_installed "Konfiguration (Rules, Skills, Hooks, Templates, Commands)"
+
+# Persoenliche Dateien wiederherstellen
+for f in .claude.json .credentials.json; do
+    if [[ -f "$CLAUDE_DIR/$f.bak" ]]; then
+        mv "$CLAUDE_DIR/$f.bak" "$CLAUDE_DIR/$f"
+    fi
+done
 
 # =============================================================================
 header "Schritt 4: Pfade personalisieren"
@@ -257,17 +326,12 @@ header "Schritt 4: Pfade personalisieren"
 
 info "Passe Pfade in Konfigurationsdateien an dein System an..."
 
-# Alle Dateien mit Platzhalter-Pfaden finden und ersetzen
 PLACEHOLDER="__HOME__"
 for target_file in "$CLAUDE_DIR/settings.json" "$CLAUDE_DIR/.mcp.json"; do
-    if [[ -f "$target_file" ]]; then
-        if grep -q "$PLACEHOLDER" "$target_file" 2>/dev/null; then
-            sed -i.bak "s|$PLACEHOLDER|$HOME|g" "$target_file"
-            rm -f "$target_file.bak"
-            success "Pfade in $(basename "$target_file") angepasst"
-        else
-            success "$(basename "$target_file") — keine Platzhalter gefunden"
-        fi
+    if [[ -f "$target_file" ]] && grep -q "$PLACEHOLDER" "$target_file" 2>/dev/null; then
+        sed -i.bak "s|$PLACEHOLDER|$HOME|g" "$target_file"
+        rm -f "$target_file.bak"
+        success "Pfade in $(basename "$target_file") angepasst"
     fi
 done
 
@@ -303,7 +367,6 @@ info "Plugins werden ueber Claude Code installiert."
 info "Das Script erstellt ein Hilfsscript, das du nach dem ersten Claude-Start ausfuehren kannst."
 echo ""
 
-# Plugin-Installationsscript erstellen
 cat > "$CLAUDE_DIR/install-plugins.sh" << 'PLUGINEOF'
 #!/usr/bin/env bash
 set -euo pipefail
@@ -313,7 +376,7 @@ CYAN='\033[0;36m'
 BOLD='\033[1m'
 NC='\033[0m'
 
-echo -e "${BOLD}${CYAN}=== Claude Code Plugin-Installation ===${NC}\n"
+echo -e "${BOLD}${CYAN}=== Runprise Claude Code — Plugin-Installation ===${NC}\n"
 
 echo -e "${BOLD}Registriere Marketplaces...${NC}"
 MARKETPLACES=(
@@ -332,7 +395,6 @@ echo ""
 echo -e "${BOLD}Installiere Plugins...${NC}"
 PLUGINS=(
     "superpowers@claude-plugins-official"
-    "atlassian@claude-plugins-official"
     "code-review@claude-plugins-official"
     "feature-dev@claude-plugins-official"
     "code-simplifier@claude-plugins-official"
@@ -533,7 +595,7 @@ echo ""
 echo "  3. Plugins installieren:"
 echo -e "     ${CYAN}~/.claude/install-plugins.sh${NC}"
 echo ""
-echo "  Danach ist Claude Code mit dem Team-Setup einsatzbereit."
+echo "  Danach ist Claude Code mit dem Runprise Team-Setup einsatzbereit."
 
 # =============================================================================
 header "Zusammenfassung"

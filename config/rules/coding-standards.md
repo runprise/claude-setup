@@ -1,0 +1,4 @@
+- TypeScript bevorzugen, async/await statt Promise-Chains
+- ES Modules (import/export), Destructuring nutzen
+- Bestehende Projekt-Patterns respektieren
+- Sicherheit: Keine Secrets committen, OWASP beachten

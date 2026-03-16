@@ -1,0 +1,5 @@
+- Frontend: Vue.js (Composition API, <script setup>), Next.js (App Router), shadcn/ui
+- Backend: Node.js, Python
+- Infra: Docker Compose, Coolify fuer Deployments
+- Bei Vue.js: Composition API, Pinia fuer State
+- Bei Next.js: App Router, Server Components wo moeglich

@@ -1,0 +1,91 @@
+{
+  "cleanupPeriodDays": 30,
+  "env": {
+    "BASH_DEFAULT_TIMEOUT_MS": "300000",
+    "BASH_MAX_OUTPUT_LENGTH": "500000",
+    "BASH_MAX_TIMEOUT_MS": "600000",
+    "CLAUDE_BASH_MAINTAIN_PROJECT_WORKING_DIR": "true",
+    "DISABLE_COST_WARNINGS": "1",
+    "DISABLE_NON_ESSENTIAL_MODEL_CALLS": "0",
+    "MAX_THINKING_TOKENS": "20000",
+    "MCP_TIMEOUT": "60000",
+    "MCP_TOOL_TIMEOUT": "60000",
+    "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "80",
+    "CLAUDE_CODE_DISABLE_TERMINAL_TITLE": "1"
+  },
+  "includeCoAuthoredBy": false,
+  "permissions": {
+    "allow": [],
+    "deny": [],
+    "defaultMode": "bypassPermissions"
+  },
+  "hooks": {
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "terminal-notifier -title 'Claude Code' -message 'Wartet auf Eingabe' -sound default",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"__HOME__/.claude/hooks/gsd-context-monitor.js\""
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "__HOME__/.claude/hooks/serena-cleanup.sh",
+            "async": true
+          },
+          {
+            "type": "command",
+            "command": "pkill -f 'lightpanda serve'",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"__HOME__/.claude/hooks/gsd-check-update.cjs\""
+          },
+          {
+            "type": "command",
+            "command": "__HOME__/.claude/hooks/lightpanda-start.sh",
+            "async": true
+          }
+        ]
+      }
+    ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "node \"__HOME__/.claude/hooks/gsd-statusline.js\""
+  },
+  "enabledPlugins": {
+    "frontend-design@claude-code-plugins": true,
+    "n8n-mcp-skills@n8n-mcp-skills": true,
+    "code-review@claude-plugins-official": true,
+    "feature-dev@claude-plugins-official": true,
+    "code-simplifier@claude-plugins-official": true,
+    "security-guidance@claude-plugins-official": true,
+    "superpowers@claude-plugins-official": true
+  },
+  "effortLevel": "high",
+  "skipDangerousModePermissionPrompt": true
+}

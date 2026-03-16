@@ -1,0 +1,5 @@
+- Immer erst lesen, dann aendern
+- Tests laufen lassen nach Code-Aenderungen
+- Keine automatischen Commits ohne Aufforderung
+- Absolute Pfade verwenden
+- Sprache: Deutsch fuer Kommunikation, Englisch fuer Code/Commits

@@ -21,9 +21,9 @@ Die gesamte Claude-Code-Konfiguration liegt in `~/.claude/` und wird als Git-Rep
 
 | Komponente | Details |
 |------------|---------|
-| Repository | `https://github.com/runprise/claude-config.git` |
+| Setup-Repo | `https://github.com/runprise/claude-setup.git` |
 | Zielverzeichnis | `~/.claude/` |
-| Inhalt | Rules, Skills, Agents, Commands, Hooks, Templates, GSD, Shopware |
+| Inhalt | Rules, Skills, Commands, Hooks, Templates |
 
 ### Verzeichnisstruktur
 
@@ -37,8 +37,7 @@ Die gesamte Claude-Code-Konfiguration liegt in `~/.claude/` und wird als Git-Rep
 │   ├── tech-stack.md            #   Vue, Next.js, Node, Docker/Coolify
 │   ├── workflow.md              #   Lesen vor Aendern, Tests, Sprache
 │   └── testing.md               #   Playwright, Lightpanda, .env.test
-├── skills/                      # Framework-Skills (14 Skills)
-│   ├── accept-ticket/           #   Jira Ticket-Abnahme
+├── skills/                      # Framework-Skills (13 Skills)
 │   ├── coolify/                 #   Coolify Deployment
 │   ├── deploy/                  #   Docker Review fuer Coolify
 │   ├── fastapi/                 #   FastAPI Backend (Python 3.12+)
@@ -49,7 +48,7 @@ Die gesamte Claude-Code-Konfiguration liegt in `~/.claude/` und wird als Git-Rep
 │   ├── payload-cms/             #   Payload CMS 3.x
 │   ├── postgresql/              #   PostgreSQL Optimierung
 │   ├── project-setup/           #   Best Practices fuer neue Projekte
-│   ├── reflagged-ci/            #   Corporate Identity
+│   ├── reflagged-ci/            #   Reflagged Corporate Identity
 │   ├── server-hardening/        #   Server Security
 │   └── vue-shadcn/              #   Vue 3 + shadcn-vue
 ├── agents/                      # Spezialisierte Agenten
@@ -84,7 +83,7 @@ Plugins werden ueber `claude /install` installiert. Jedes Plugin kommt aus einem
 
 | Marketplace | Repository | Plugins |
 |------------|------------|---------|
-| claude-plugins-official | `anthropics/claude-plugins-official` | superpowers, atlassian, code-review, feature-dev, code-simplifier, security-guidance |
+| claude-plugins-official | `anthropics/claude-plugins-official` | superpowers, code-review, feature-dev, code-simplifier, security-guidance |
 | claude-code-plugins | `anthropics/claude-code` | frontend-design |
 | n8n-mcp-skills | `czlonkowski/n8n-skills` | n8n-mcp-skills |
 | agent-deck | `asheshgoplani/agent-deck` | agent-deck |
@@ -94,7 +93,6 @@ Plugins werden ueber `claude /install` installiert. Jedes Plugin kommt aus einem
 | Plugin | Marketplace | Zweck |
 |--------|------------|-------|
 | **superpowers** | claude-plugins-official | Brainstorming, TDD, Plan-Execution, Code-Review Workflows |
-| **atlassian** | claude-plugins-official | Jira + Confluence Integration |
 | **code-review** | claude-plugins-official | PR Code Reviews |
 | **feature-dev** | claude-plugins-official | Gefuehrte Feature-Entwicklung |
 | **code-simplifier** | claude-plugins-official | Code-Vereinfachung |

@@ -1,0 +1,14 @@
+{
+  "playwright": {
+    "command": "npx",
+    "args": ["@playwright/mcp@latest"]
+  },
+  "playwright-light": {
+    "command": "npx",
+    "args": [
+      "@playwright/mcp@latest",
+      "--cdp-endpoint", "ws://127.0.0.1:9222",
+      "--headless"
+    ]
+  }
+}
