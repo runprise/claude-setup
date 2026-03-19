@@ -101,6 +101,19 @@ Skills sind Anleitungen die Claude bei bestimmten Aufgaben automatisch befolgt.
 | **n8n-as-code** | n8n Workflows | n8n Workflows als TypeScript mit n8nac CLI erstellen und validieren |
 | **roxy** | Lokale Domains | Roxy Dev-Proxy: `.roxy`-Domains mit Auto-HTTPS, Path-Routing, Wildcards |
 
+#### Design
+
+| Skill | Trigger | Beschreibung |
+|-------|---------|-------------|
+| **runprise-design** | runprise-Projekt erkannt | Auto-Erkennung via Verzeichnisname/package.json, laedt Design-Tokens via `/rp:design` |
+
+### Slash-Commands (enthalten in `config/commands/`)
+
+| Command | Beschreibung |
+|---------|-------------|
+| `/rp:design` | Vollstaendiger runprise Design Guide — Farben, Typografie, Spacing, Komponenten, Do's & Don'ts |
+| `/lightpanda` | Lightpanda Headless Browser steuern |
+
 ### CLI Tools (optional)
 
 | Tool | Installation | Beschreibung |
@@ -123,6 +136,20 @@ Skills sind Anleitungen die Claude bei bestimmten Aufgaben automatisch befolgt.
 1. Claude Code starten: `claude`
 2. Beim ersten Start mit Anthropic Account einloggen
 3. Plugins installieren: `~/.claude/install-plugins.sh`
+
+## Automatischer Update-Check
+
+Bei jedem Claude-Session-Start prueft ein Hook automatisch ob eine neue Version verfuegbar ist. Der Check laeuft async und blockiert den Start nicht.
+
+**Voraussetzung:** Das geklonte Repo muss lokal vorhanden bleiben — der Hook vergleicht die installierte Version mit der `VERSION`-Datei im Repo.
+
+**So funktioniert es:**
+1. Bei der Installation werden Version (`~/.claude/runprise-config-version`) und Repo-Pfad (`~/.claude/runprise-config-repo-path`) gespeichert
+2. Der SessionStart-Hook vergleicht installierte Version mit der Repo-Version
+3. Falls unterschiedlich: Update-Info wird nach `/tmp/runprise-config-update.json` geschrieben
+4. Nach einem `update.sh` wird die Versionsdatei synchronisiert
+
+**Neue Version veroeffentlichen:** `VERSION`-Datei im Repo-Root hochzaehlen, committen und pushen. Nach `git pull` sehen Teammitglieder beim naechsten Session-Start, dass ein Update verfuegbar ist.
 
 ## Wie das Update funktioniert
 
@@ -147,17 +174,18 @@ Um eine uebersprungene Datei trotzdem zu aktualisieren:
 claude-setup/
 ├── install.sh               # Gefuehrte Erstinstallation
 ├── update.sh                # Intelligentes Update
+├── VERSION                  # Aktuelle Version (fuer Update-Check)
 ├── lib/
 │   └── common.sh            # Gemeinsame Funktionen
 ├── config/                   # Wird nach ~/.claude/ kopiert
 │   ├── CLAUDE.md             # Globale Instruktionen
 │   ├── settings.json         # Hooks, Permissions, Env-Variablen
 │   ├── .mcp.json             # MCP-Server (Playwright)
-│   ├── rules/                # Coding Standards, Workflow, Testing
-│   ├── skills/               # 11 Framework-Skills
-│   ├── hooks/                # Session-Hooks (Lightpanda, Cleanup)
+│   ├── rules/                # Coding Standards, Workflow, Testing, Design System
+│   ├── skills/               # 12 Framework-Skills
+│   ├── hooks/                # Session-Hooks (Lightpanda, Cleanup, Update-Check)
 │   ├── templates/            # Vorlagen (.env.test)
-│   └── commands/             # Slash Commands (Lightpanda)
+│   └── commands/             # Slash Commands (Lightpanda, /rp:design)
 ├── README.md
 └── SETUP-OVERVIEW.md         # Detaillierte Komponentendoku
 ```

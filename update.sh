@@ -283,6 +283,16 @@ find "$CLAUDE_DIR" -maxdepth 1 -name ".runprise-backup-*" -type d -mtime +7 -exe
 
 # =============================================================================
 
+# --- Version und Repo-Pfad aktualisieren (fuer Update-Check Hook) ---
+
+if [[ -f "$SCRIPT_DIR/VERSION" ]]; then
+    cp "$SCRIPT_DIR/VERSION" "$CLAUDE_DIR/runprise-config-version"
+    echo "$SCRIPT_DIR" > "$CLAUDE_DIR/runprise-config-repo-path"
+    info "Versionsdatei aktualisiert: $(cat "$SCRIPT_DIR/VERSION")"
+    # Cache-Datei aufraemen (Update wurde durchgefuehrt)
+    rm -f /tmp/runprise-config-update.json
+fi
+
 print_summary
 
 if [[ ${#FILES_CONFLICT[@]} -gt 0 ]]; then

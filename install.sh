@@ -260,6 +260,11 @@ done
 
 track_installed "Konfiguration (Rules, Skills, Hooks, Templates, Commands)"
 
+# Version und Repo-Pfad speichern (fuer Update-Check)
+cp "$SCRIPT_DIR/VERSION" "$CLAUDE_DIR/runprise-config-version"
+echo "$SCRIPT_DIR" > "$CLAUDE_DIR/runprise-config-repo-path"
+success "Version und Repo-Pfad gespeichert (fuer automatischen Update-Check)"
+
 # =============================================================================
 header "Schritt 4: Pfade personalisieren"
 # =============================================================================
