@@ -50,11 +50,45 @@ if ! acquire_lock; then
 fi
 
 CONFIG_SRC="$SCRIPT_DIR/config"
+VENDOR_SRC="$SCRIPT_DIR/config/_vendored"
 
 if [[ ! -d "$CONFIG_SRC" ]]; then
     error "config/ Verzeichnis nicht gefunden"
     exit 1
 fi
+
+# --- Upstream-Sync (falls Submodule vorhanden) ---
+
+if [[ -f "$SCRIPT_DIR/sync-upstream.sh" ]] && [[ -d "$SCRIPT_DIR/upstream/flagbit/.git" || -f "$SCRIPT_DIR/upstream/flagbit/.git" ]]; then
+    info "Synchronisiere Flagbit-Upstream..."
+    if "$SCRIPT_DIR/sync-upstream.sh" >/dev/null 2>&1; then
+        success "Upstream-Sync abgeschlossen"
+    else
+        warn "Upstream-Sync fehlgeschlagen — fahre mit vorhandenem _vendored/ Stand fort"
+    fi
+fi
+
+# Helper: rel_path aus Source ableiten.
+# Bei Vendored-Files (config/_vendored/skills/foo.md) → skills/foo.md (ohne _vendored/ Praefix)
+# Bei Runprise-Files (config/skills/foo.md) → skills/foo.md
+src_to_rel_path() {
+    local src_file="$1"
+    if [[ "$src_file" == "$VENDOR_SRC/"* ]]; then
+        echo "${src_file#$VENDOR_SRC/}"
+    else
+        echo "${src_file#$CONFIG_SRC/}"
+    fi
+}
+
+# Helper: Alle zu deployenden Sources liefern.
+# Pass 1: _vendored/ (Flagbit), Pass 2: config/ (Runprise — ueberschreibt).
+# Iteration-Order: _vendored zuerst, dann alles aus config/ ohne _vendored.
+iter_all_sources() {
+    if [[ -d "$VENDOR_SRC" ]]; then
+        find "$VENDOR_SRC" -type f ! -name '.last-sync-checksums' -print0
+    fi
+    find "$CONFIG_SRC" -type f -not -path "$VENDOR_SRC/*" -print0
+}
 
 # =============================================================================
 header "Aenderungen pruefen"
@@ -69,12 +103,12 @@ if [[ ! -f "$MANIFEST_FILE" ]]; then
         info "Erstelle Manifest aus vorhandenen Dateien..."
         # Alle bekannten Config-Pfade durchgehen und Checksummen speichern
         while IFS= read -r -d '' src_file; do
-            rel_path="${src_file#$CONFIG_SRC/}"
+            rel_path="$(src_to_rel_path "$src_file")"
             dest="$CLAUDE_DIR/$rel_path"
             if [[ -f "$dest" ]]; then
                 manifest_write "$rel_path" "$(file_checksum "$dest")"
             fi
-        done < <(find "$CONFIG_SRC" -type f -print0)
+        done < <(iter_all_sources)
         success "Manifest erstellt mit $(wc -l < "$MANIFEST_FILE" | tr -d ' ') Eintraegen"
     else
         warn "Ohne Manifest kann nicht festgestellt werden welche Dateien lokal geaendert wurden."
@@ -91,8 +125,16 @@ declare -a FILES_UNCHANGED=() # Keine Aenderung im Repo
 
 info "Vergleiche Dateien..."
 
+# Map rel_path -> src_file (letzte Source gewinnt — Runprise config ueberschreibt _vendored)
+declare -A SRC_FOR_REL=()
+
 while IFS= read -r -d '' src_file; do
-    rel_path="${src_file#$CONFIG_SRC/}"
+    rel_path="$(src_to_rel_path "$src_file")"
+    SRC_FOR_REL["$rel_path"]="$src_file"
+done < <(iter_all_sources)
+
+for rel_path in "${!SRC_FOR_REL[@]}"; do
+    src_file="${SRC_FOR_REL[$rel_path]}"
     dest="$CLAUDE_DIR/$rel_path"
     src_checksum="$(file_checksum "$src_file")"
 
@@ -117,7 +159,7 @@ while IFS= read -r -d '' src_file; do
             FILES_CONFLICT+=("$rel_path")
         fi
     fi
-done < <(find "$CONFIG_SRC" -type f -print0)
+done
 
 # --- Zusammenfassung anzeigen ---
 
@@ -184,7 +226,7 @@ fi
 # --- Neue Dateien installieren ---
 
 for rel_path in "${FILES_NEW[@]}"; do
-    src="$CONFIG_SRC/$rel_path"
+    src="${SRC_FOR_REL[$rel_path]}"
     dest="$CLAUDE_DIR/$rel_path"
     if deploy_file "$src" "$dest" "$rel_path"; then
         # Platzhalter ersetzen in neuen Dateien
@@ -206,7 +248,7 @@ done
 # --- Bestehende Dateien aktualisieren ---
 
 for rel_path in "${FILES_UPDATE[@]}"; do
-    src="$CONFIG_SRC/$rel_path"
+    src="${SRC_FOR_REL[$rel_path]}"
     dest="$CLAUDE_DIR/$rel_path"
     if deploy_file "$src" "$dest" "$rel_path"; then
         # Platzhalter ersetzen

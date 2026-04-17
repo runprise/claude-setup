@@ -1,58 +1,58 @@
-# runprise Design System
+# runprise Design System — Near Black & Chartreuse
 
-Wende den runprise Design Guide an, wenn du UI-Komponenten, Styles oder Frontend-Code fuer runprise erstellst oder aenderst. Der vollstaendige Design Guide liegt unter `__HOME__/Development/runprise-designguide/index.html`.
+Wende den runprise Design Guide an, wenn du UI-Komponenten, Styles oder Frontend-Code fuer runprise erstellst oder aenderst. Der vollstaendige Design Guide liegt unter `__HOME__/Development/runprise-designguide/index.html`. Das Theme liegt in `src/themes/runprise/index.css`.
 
 ---
 
-## Farben
+## Farbsystem — Near Black & Chartreuse (60-30-10)
 
-### Primaerfarbe — Warm Coral
-| Token | Hex | Verwendung |
-|-------|-----|------------|
-| `--primary` | `#E8725C` | CTAs, Focus-Ring, Links |
-| `--primary-on` | `#FFFFFF` | Text auf Primary |
-| `--primary-dim` | `rgba(232,114,92,0.1)` | Primary 10% Opacity |
-| `--primary-surface` | `#FFF6F3` | Selektierte Zeile, aktive Bereiche |
-| Primary Hover | `#C4533E` | Hover/Pressed States |
+### Primaerfarbe — Chartreuse (Signal, 10%)
+| Token (shadcn HSL) | Hex | Verwendung |
+|---------------------|-----|------------|
+| `--primary: 84 82% 56%` | `#B4E834` | CTAs, Focus-Ring, Links, Akzente |
+| `--primary-foreground: 240 27% 7%` | `#0E0E14` | Text auf Chartreuse |
+| Primary Hover | `#9ACC2A` | Hover/Pressed States |
+| Primary Surface | `#F5FDE8` (Light) / `#1A2210` (Dark) | Selektierte Zeile, aktive Bereiche |
+| Primary Dim | `rgba(180,232,52,0.1)` | Subtle Backgrounds |
+
+### Near Black (Dominant, 60%)
+| Hex | Verwendung |
+|-----|------------|
+| `#0E0E14` | Primaerfarbe, dominanter Hintergrund (Dark), Text (Light) |
+| `#1A1A22` | Dark Surface — Cards, erhoehte Flaechen (30%) |
+| `#26262E` | Elevated Surface — Dropdowns, Popovers (Dark) |
 
 ### Hintergruende & Text
-| Token | Hex | Verwendung |
-|-------|-----|------------|
-| `--bg` | `#FAF8F6` | Seiten-Hintergrund |
-| `--bg2` | `#FFFFFF` | Card-Hintergrund |
-| `--bg3` / `--neutral-bg` | `#F2EDE8` | Neutraler Hintergrund |
-| `--fg` | `#1A1210` | Primaertext |
-| `--fg2` / `--neutral-fg` | `#6A5A4A` | Sekundaertext |
-| `--fg3` | `#8A7A72` | Tertiaertext / Muted |
+| Token | Light | Dark | Verwendung |
+|-------|-------|------|------------|
+| `--background` | `#FFFFFF` | `#0E0E14` | Seiten-Hintergrund |
+| `--card` | `#FAFAFA` | `#1A1A22` | Card-Hintergrund |
+| `--muted` | `#F5F5F5` | `#26262E` | Neutraler Hintergrund |
+| `--foreground` | `#0E0E14` | `#F0F0F2` | Primaertext |
+| `--muted-foreground` | `#737373` | `#707078` | Tertiaertext / Muted |
+| `--border` | `#E5E5E5` | `rgba(240,240,242,0.08)` | Borders |
 
-### Borders & Schatten
-| Token | Wert |
-|-------|------|
-| `--border` | `rgba(26,18,16,0.08)` |
-| `--border-hover` | `rgba(26,18,16,0.16)` |
-| `--card-shadow` | `0 4px 24px rgba(0,0,0,0.06)` |
-
-### Warm-Gray-Skala
+### Neutrale Grau-Skala (Tailwind Neutral — KEIN Farbstich)
 | Stufe | Hex |
 |-------|-----|
-| 50 | `#FAF8F6` |
-| 100 | `#F2EDE8` |
-| 200 | `#E8E0D8` |
-| 300 | `#C8BEB4` |
-| 400 | `#A89A8E` |
-| 500 | `#8A7A72` |
-| 600 | `#6A5A4A` |
-| 700 | `#4A3A2A` |
-| 800 | `#2A1E16` |
-| 900 | `#1A1210` |
+| 50 | `#FAFAFA` |
+| 100 | `#F5F5F5` |
+| 200 | `#E5E5E5` |
+| 300 | `#D4D4D4` |
+| 400 | `#A3A3A3` |
+| 500 | `#737373` |
+| 600 | `#525252` |
+| 700 | `#404040` |
+| 800 | `#262626` |
+| 900 | `#171717` |
 
-### Semantische Farben
-| Typ | Farbe | Hintergrund | Kontext |
-|-----|-------|-------------|---------|
-| Success | `#2E7D32` | `#E8F5E9` | Vorkontiert, Verbucht |
-| Warning | `#C4533E` | `#FFF0EB` | Dubletten, Hinweise |
-| Error | `#D32F2F` | `#FFEBEE` | Storniert, Ueberfaellig |
-| Info | `#1565C0` | `#E3F2FD` | In Bearbeitung |
+### Semantische Farben (Tailwind-Palette)
+| Typ | Light | Dark | Kontext |
+|-----|-------|------|---------|
+| Success | `#10b981` | `#34d399` | Vorkontiert, Verbucht |
+| Warning | `#f59e0b` | `#fbbf24` | Dubletten, Hinweise |
+| Error | `#ef4444` | `#f87171` | Storniert, Ueberfaellig |
+| Info | `#3b82f6` | `#60a5fa` | In Bearbeitung |
 
 ### Feature-Farben
 | Name | Hex | Kontext |
@@ -63,16 +63,22 @@ Wende den runprise Design Guide an, wenn du UI-Komponenten, Styles oder Frontend
 | Coach | `#D97706` | Anleitungen |
 
 ### Flaechenverteilung
-- 70% Neutral/Background (`#FAF8F6`)
-- 20% Cards (`#FFFFFF`)
-- 8% Primary Coral (`#E8725C`)
-- 2% Dark (`#1A1210`)
+- 60% Schwarz/Near Black (`#0E0E14`)
+- 30% Dark Surface (`#1A1A22`)
+- 10% Signal/Chartreuse (`#B4E834`)
 
 ### Kontrast-Regeln (WCAG)
-- Coral auf Warm White: 3.2:1 — nur AA Large
-- Coral auf Warm Black: 5.1:1 — AA
-- Warm Black auf Warm White: 15.8:1 — AAA
-- **Coral-Text niemals unter 16px/Bold verwenden**
+- Chartreuse auf Near Black: 12.1:1 — AAA
+- Near Black auf White: 19.2:1 — AAA
+- Gray-500 auf White: 4.5:1 — AA
+- **Chartreuse auf White: 1.8:1 — FAIL! Nur auf dunklem Hintergrund verwenden!**
+
+### Textmarker-Prinzip
+Chartreuse auf Weiss hat zu wenig Kontrast. Stattdessen: Chartreuse als Textmarker-Hintergrund (untere 55%) hinter schwarzem Text — wie ein invertierter Highlighter.
+```css
+background: linear-gradient(to top, #B4E834 55%, transparent 55%);
+color: #0E0E14;
+```
 
 ---
 
@@ -132,51 +138,57 @@ Wende den runprise Design Guide an, wenn du UI-Komponenten, Styles oder Frontend
 
 | Variante | Background | Border | Text |
 |----------|-----------|--------|------|
-| Primary | `#E8725C` | — | `#FFFFFF` |
-| Secondary | transparent | `#E8725C` | `#E8725C` |
-| Ghost | transparent | transparent | `#1A1210` |
-| Success | `#2E7D32` | — | `#FFFFFF` |
-| Destructive | `#D32F2F` | — | `#FFFFFF` |
+| Primary | `#B4E834` | — | `#0E0E14` |
+| Secondary | transparent | `#B4E834` | `#B4E834` |
+| Ghost | transparent | `var(--border)` | `var(--fg)` |
+| Success | `#10b981` | — | `#FFFFFF` |
+| Destructive | `#ef4444` | — | `#FFFFFF` |
 
-### Badges
-- Padding: 3px 10px, Border-Radius: 4px, Font-Size: 11px, Font-Weight: 600
-- Varianten: success, warning, error, info, neutral
+### Badges — C3 Uppercase Micro
+- **Font-Size: 9px**, Font-Weight: 700, Letter-Spacing: 0.06em, Text-Transform: Uppercase
+- Border: 1px solid, Border-Radius: 4px, Padding: 3px 8px
+- Varianten: success (border+text: `--success`), warning (`--warning`), error (`--error`), info (`--info`), neutral (`--border-hover` + `--fg3`)
 
 ### Inputs
 - Border-Radius: 8px, Border: 1.5px solid var(--border), Padding: 8px 12px
-- Focus: Border `#E8725C`, Box-Shadow `0 0 0 3px rgba(232,114,92,0.12)`
+- Focus: Border `#B4E834`, Box-Shadow `0 0 0 3px rgba(180,232,52,0.12)`
 
 ### Sidebar
 - **Immer Dark-Theme** unabhaengig vom App-Theme
-- Items: 44px x 44px, Border-Radius: 8px, Background: `#1A1210`
-- Inaktiv: `#8A7A72`, Aktiv: Background `rgba(232,114,92,0.15)`, Icon `#E8725C`
+- Background: `#0A0A0A` (neutral-dunkel)
+- Items: 44px x 44px, Border-Radius: 8px
+- Inaktiv: `#737373`, Aktiv: Background `rgba(180,232,52,0.15)`, Icon `#B4E834`
+- Icons: Lucide (FileText, BarChart3, Settings, LayoutDashboard etc.)
 
 ---
 
 ## Regeln — Do's & Don'ts
 
 ### IMMER
-- Warm Coral `#E8725C` als einzige Primaerfarbe fuer CTAs und Focus-Rings
+- Chartreuse `#B4E834` als einzige Signalfarbe fuer CTAs und Focus-Rings
+- Chartreuse NUR auf dunklem Hintergrund als Text/Farbe verwenden
+- Auf hellem Hintergrund: Textmarker-Effekt (Chartreuse-BG hinter schwarzem Text)
 - Plus Jakarta Sans als einzige Schrift
 - 4px-Grid fuer alle Abstaende
 - `tabular-nums` fuer Zahlenkolonnen
-- Warme Grau-Toene (nicht kuehles Grau)
-- Focus-Ring in Coral, nicht Blau
-- Ausreichend Kontrast (WCAG AA)
+- Neutrale Grau-Toene (Tailwind Neutral, KEIN Farbstich)
+- Focus-Ring in Chartreuse, nicht Blau
+- C3 Uppercase Micro fuer Status-Badges
 
 ### NIEMALS
-- Blaue CTAs oder Focus-Rings (`#2563EB` ist nur fuer Guard/Info)
-- Kuehle Grau-Toene (#f5f5f5, #e5e5e5, #737373)
+- Chartreuse als Text auf weissem Hintergrund (Kontrast 1.8:1 = FAIL)
+- Warme/braune Grau-Toene (#FAF8F6, #8A7A72, #1A1210 — das war die alte CI)
+- Coral/Orange als Primary (#E8725C — das war die alte CI)
 - Font-Weight 300 (Light)
-- Coral-Text unter 16px/Bold
 - Andere Schriften als Plus Jakarta Sans
 - Ungerade Spacing-Werte (5px, 7px, 13px etc.)
-- Schatten staerker als `0 4px 24px rgba(0,0,0,0.06)`
+- Blaue CTAs oder Focus-Rings (`#2563EB` ist nur fuer Guard/Info)
 
-### Vorher/Nachher-Leitlinie
+### Migration (Alt → Neu)
 Wenn bestehender runprise-Code diese Muster zeigt, korrigiere sie:
-- Blaue Buttons/Links → Coral `#E8725C`
-- Blauer Focus-Ring → Coral Focus-Ring
-- Inter/System-Font → Plus Jakarta Sans
-- Kuehle Grau-Toene → Warme Grau-Skala
-- Inkonsistente Badge-Farben → Semantisches Badge-System
+- Coral Buttons/Links `#E8725C` → Chartreuse `#B4E834` (mit schwarzem Text)
+- Coral Focus-Ring → Chartreuse Focus-Ring
+- Warme Grau-Toene (#FAF8F6, #F2EDE8, #8A7A72) → Neutrale Grays (#FAFAFA, #F5F5F5, #737373)
+- Warmer dunkler Hintergrund `#1A1210` / `#2A1E16` → Near Black `#0E0E14` / `#1A1A22`
+- Alte Badges (11px, bg+text) → C3 Uppercase Micro (9px, outline, uppercase)
+- Sidebar warm-dark `#2A1E16` → Neutral-dark `#0A0A0A`

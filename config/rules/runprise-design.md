@@ -5,7 +5,7 @@
 Wende diese Regel an, wenn das aktuelle Projekt ein **runprise-Projekt** ist. Erkennungsmerkmale:
 - Verzeichnisname enthaelt "runprise"
 - `package.json` hat "runprise" im `name`-Feld
-- Es existiert eine Datei `src/themes/default/index.css` oder aehnliche runprise-spezifische Strukturen
+- Es existiert eine Datei `src/themes/runprise/index.css` oder aehnliche runprise-spezifische Strukturen
 - Der User erwaehnt "runprise" im Kontext
 
 ## Was tun bei Erkennung?
@@ -17,10 +17,16 @@ Wenn du UI-Komponenten, Styles, Templates oder Frontend-Code fuer ein runprise-P
 
 ## Kurzreferenz der wichtigsten Regeln (immer beachten)
 
-- **Primaerfarbe**: Warm Coral `#E8725C` — einzige CTA- und Focus-Ring-Farbe
+- **Signalfarbe**: Chartreuse `#B4E834` — einzige CTA- und Focus-Ring-Farbe
+- **Dominant**: Near Black `#0E0E14` — 60% der Flaeche
+- **Verhaeltnis**: 60% Schwarz, 30% Dark Surface (`#1A1A22`), 10% Chartreuse
 - **Schrift**: Plus Jakarta Sans — einzige erlaubte Schrift, Gewichte 400/500/600/700
-- **Grau-Toene**: Nur warme Grays (#FAF8F6 bis #1A1210) — niemals kuehle Grays
+- **Grau-Toene**: Nur neutrale Tailwind Grays (#FAFAFA bis #171717) — KEIN Farbstich
 - **Spacing**: 4px-Grid (4, 8, 12, 16, 24, 32, 48, 64)
 - **Border-Radius**: sm=4px, md=8px, lg=12px, xl=16px
-- **Focus-Ring**: Coral, nicht Blau
-- **NIEMALS**: Blaue CTAs, Font-Weight 300, Coral-Text unter 16px/Bold, kuehle Grays
+- **Focus-Ring**: Chartreuse `#B4E834`, nicht Blau
+- **Badges**: C3 Uppercase Micro (9px, outline, uppercase, letter-spacing 0.06em)
+- **Sidebar**: Immer dunkel `#0A0A0A`, Chartreuse-Highlight
+- **NIEMALS**: Chartreuse-Text auf weissem Hintergrund (Kontrast 1.8:1 = FAIL!)
+- **NIEMALS**: Warme Grays, Coral/Orange als Primary, Font-Weight 300
+- **Textmarker**: Auf hellem Hintergrund Chartreuse als BG-Highlight hinter schwarzem Text

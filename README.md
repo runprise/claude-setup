@@ -151,6 +151,30 @@ Bei jedem Claude-Session-Start prueft ein Hook automatisch ob eine neue Version 
 
 **Neue Version veroeffentlichen:** `VERSION`-Datei im Repo-Root hochzaehlen, committen und pushen. Nach `git pull` sehen Teammitglieder beim naechsten Session-Start, dass ein Update verfuegbar ist.
 
+## Flagbit-Upstream als Vendored Source
+
+Runprise nutzt das [Flagbit Claude Config](https://github.com/flagbit/claude-code-config) als Upstream-Quelle fuer ausgewaehlte Skills und Rules. Flagbit-Dateien werden in `config/_vendored/` gestaget und mit niedrigerer Praeferenz als Runprise-eigene Dateien deployed — bei Namenskollision gewinnt immer Runprise.
+
+**Komponenten:**
+- `upstream/flagbit/` — Git-Submodule, pinned via `FLAGBIT_PIN` (aktuell: `v1.28.0`)
+- `upstream/allowlist.conf` — Bash-Arrays die steuern welche Skills/Rules uebernommen werden
+- `sync-upstream.sh` — Kopiert erlaubte Artefakte aus Submodule nach `config/_vendored/`
+- `lib/merge-settings.js` — Non-destruktiver Settings-Merge (aus Flagbit, jetzt Runprise-owned)
+
+**Upstream aktualisieren:**
+```bash
+./sync-upstream.sh --bump v1.29.0   # auf neueren Tag hochsetzen
+./update.sh                          # Deploy des neuen Stands
+```
+
+**Skill hinzufuegen/entfernen:**
+`upstream/allowlist.conf` bearbeiten (FLAGBIT_SKILLS / FLAGBIT_RULES Arrays) und `./sync-upstream.sh` ausfuehren. Dateien ausserhalb der Allowlist fliessen **nie** ein.
+
+**Was NICHT uebernommen wird:**
+Flagbit-interne Scripts (install.sh, update.sh, flagbit-update-check.sh, flagbit-statusline.sh, flagbit-tracker npm package), Flagbit-spezifische Skills (design-reflagged-ci, workflow-* Jira-Workflows, platform-shopware/magento/payload-cms), Flagbit-Plugins (Atlassian-Integration, Caveman, Plannotator-spezifisch).
+
+**User-Nutzung:** Runprise-User fuehren ausschliesslich `runprise-claude-setup/install.sh` bzw. `update.sh` aus. Flagbit-Repositories werden **nie** direkt kontaktiert (ausser beim Runprise-internen `sync-upstream.sh`).
+
 ## Wie das Update funktioniert
 
 Das Setup nutzt ein **Manifest** (`~/.claude/.runprise-manifest`), das fuer jede installierte Datei den Checksum zum Zeitpunkt der Installation speichert.
@@ -172,20 +196,28 @@ Um eine uebersprungene Datei trotzdem zu aktualisieren:
 
 ```
 claude-setup/
-├── install.sh               # Gefuehrte Erstinstallation
-├── update.sh                # Intelligentes Update
-├── VERSION                  # Aktuelle Version (fuer Update-Check)
+├── install.sh               # Gefuehrte Erstinstallation (inkl. Upstream-Sync)
+├── update.sh                # Intelligentes Update (inkl. Upstream-Sync)
+├── sync-upstream.sh         # Vendored Flagbit-Artefakte aktualisieren
+├── VERSION                  # Runprise-Version
+├── FLAGBIT_PIN              # Gepinnter Flagbit-Tag (z.B. v1.28.0)
+├── .gitmodules              # Flagbit als Git-Submodule
 ├── lib/
-│   └── common.sh            # Gemeinsame Funktionen
+│   ├── common.sh            # Gemeinsame Funktionen
+│   └── merge-settings.js    # Non-destruktiver Settings-Merge
+├── upstream/
+│   ├── flagbit/             # Submodule (pinned, read-only)
+│   └── allowlist.conf       # Welche Flagbit-Artefakte fliessen ein
 ├── config/                   # Wird nach ~/.claude/ kopiert
 │   ├── CLAUDE.md             # Globale Instruktionen
 │   ├── settings.json         # Hooks, Permissions, Env-Variablen
 │   ├── .mcp.json             # MCP-Server (Playwright)
 │   ├── rules/                # Coding Standards, Workflow, Testing, Design System
-│   ├── skills/               # 12 Framework-Skills
-│   ├── hooks/                # Session-Hooks (Lightpanda, Cleanup, Update-Check)
+│   ├── skills/               # Runprise-eigene Skills (runprise-design, vue-shadcn, deploy, ...)
+│   ├── hooks/                # Session-Hooks (Update-Check, Statusline, Lightpanda, Cleanup)
 │   ├── templates/            # Vorlagen (.env.test)
-│   └── commands/             # Slash Commands (Lightpanda, /rp:design)
+│   ├── commands/             # Slash Commands (/rp:design, /runprise-update, /lightpanda)
+│   └── _vendored/            # GIT-IGNORIERT, generiert von sync-upstream.sh
 ├── README.md
 └── SETUP-OVERVIEW.md         # Detaillierte Komponentendoku
 ```

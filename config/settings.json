@@ -80,7 +80,7 @@
   },
   "statusLine": {
     "type": "command",
-    "command": "node \"__HOME__/.claude/hooks/gsd-statusline.js\""
+    "command": "__HOME__/.claude/hooks/runprise-statusline.sh"
   },
   "enabledPlugins": {
     "frontend-design@claude-code-plugins": true,

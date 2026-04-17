@@ -56,10 +56,28 @@ if ! acquire_lock; then
 fi
 
 CONFIG_SRC="$SCRIPT_DIR/config"
+VENDOR_SRC="$SCRIPT_DIR/config/_vendored"
 
 if [[ ! -d "$CONFIG_SRC" ]]; then
     error "config/ Verzeichnis nicht gefunden in $SCRIPT_DIR"
     exit 1
+fi
+
+# --- Upstream-Sync (wenn lokales Repo mit Submodule) ---
+# Bei Remote-Install (curl | bash mit temp-clone) existiert submodule moeglicherweise nicht.
+# In dem Fall ueberspringen — VENDOR_SRC bleibt leer, nur Runprise-eigen config wird deployed.
+
+if [[ -f "$SCRIPT_DIR/sync-upstream.sh" ]] && [[ -d "$SCRIPT_DIR/upstream/flagbit/.git" || -f "$SCRIPT_DIR/upstream/flagbit/.git" ]]; then
+    info "Synchronisiere Flagbit-Upstream..."
+    if "$SCRIPT_DIR/sync-upstream.sh" >/dev/null 2>&1; then
+        success "Upstream-Sync abgeschlossen"
+    else
+        warn "Upstream-Sync fehlgeschlagen — fahre ohne Flagbit-Skills fort"
+        VENDOR_SRC=""
+    fi
+else
+    info "Kein Submodule vorhanden — ueberspringe Upstream-Sync"
+    VENDOR_SRC=""
 fi
 
 # =============================================================================
@@ -214,6 +232,38 @@ install_config_file() {
             || { warn "  Fehler bei $rel_path"; track_failed "$rel_path"; return; }
     fi
 }
+
+# Hilfsfunktion: Vendored-Datei ohne Prompt deployen (Runprise-config kann spaeter ueberschreiben)
+install_vendored_file() {
+    local src="$1"
+    local rel_path="$2"
+    local dest="$CLAUDE_DIR/$rel_path"
+    mkdir -p "$(dirname "$dest")"
+    if deploy_file "$src" "$dest" "$rel_path"; then
+        if [[ "$rel_path" == hooks/* ]] || [[ "$rel_path" == *.sh ]]; then
+            chmod +x "$dest" 2>/dev/null || true
+        fi
+        return 0
+    fi
+    return 1
+}
+
+# --- Pass 1: Vendored Flagbit-Artefakte (werden ggf. durch Runprise-config ueberschrieben) ---
+
+if [[ -n "$VENDOR_SRC" ]] && [[ -d "$VENDOR_SRC" ]]; then
+    info "Flagbit-Vendored Artefakte..."
+    vendored_count=0
+    while IFS= read -r -d '' vfile; do
+        # Checksums-Datei ueberspringen
+        [[ "$(basename "$vfile")" == ".last-sync-checksums" ]] && continue
+        rel_path="${vfile#$VENDOR_SRC/}"
+        install_vendored_file "$vfile" "$rel_path" && ((vendored_count++)) || true
+    done < <(find "$VENDOR_SRC" -type f -print0)
+    success "  $vendored_count Flagbit-Artefakte deployed"
+    track_installed "Flagbit-Vendored ($vendored_count Dateien)"
+fi
+
+# --- Pass 2: Runprise-eigene config/ (ueberschreibt Vendored bei Namensgleichheit) ---
 
 # Hauptdateien
 install_config_file "$CONFIG_SRC/CLAUDE.md" "CLAUDE.md"

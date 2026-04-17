@@ -1,0 +1,3 @@
+[submodule "upstream/flagbit"]
+	path = upstream/flagbit
+	url = https://github.com/flagbit/claude-code-config.git
